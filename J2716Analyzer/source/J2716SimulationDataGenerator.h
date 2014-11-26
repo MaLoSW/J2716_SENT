@@ -19,7 +19,7 @@ protected:
 	U32 mSimulationSampleRateHz;
 
 protected:
-	void CreateSerialNibbles(U32 u32SampleData);
+	void CreateSerialNibbles( U8* pu8Data , U8 u8Len );
 	void CreateSyncField();
 	void CreateLowPulse();
 	void CreatePausePulse();

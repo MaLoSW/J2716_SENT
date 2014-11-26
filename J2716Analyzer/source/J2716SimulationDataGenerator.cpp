@@ -44,42 +44,36 @@ U32 J2716SimulationDataGenerator::GenerateSimulationData( U64 largest_sample_req
 	{
 		CreateSyncField();
 		StartOfData();
-		/*ToDo: Generate STATUS NUBBLE*/
-		CreateSerialNibbles( u32SampleData );
+		/*ToDo: Generate STATUS NUBBLE here*/
+		/* DATA nibbles */
+		CreateSerialNibbles( &au8DataSamples[ u8SampleIndex ][ 0 ] , mSettings->u32Nibbles );
+		/* CRC */
+		u8CrcVal = ComputeCrc( &au8DataSamples[ u8SampleIndex ][ 0 ] , mSettings->u32Nibbles );
+		StartOfData( );				/*Start CRC*/
+		AdvanceTicks( u8CrcVal );	/*Add CRC*/
+		/* Optional PAUSE pulse */
 		if( true == mSettings->boPauseFlg )
 		{
-			CreatePausePulse();
+			CreatePausePulse( );
 		}
 		else
 		{
+			/*do nothing*/
 		}
-		u8CrcVal = ComputeCrc( &au8DataSamples[ u8SampleIndex ][ 0 ] , 6 );
-		StartOfData( );				/*Start CRC*/
-		AdvanceTicks( u8CrcVal );	/*Add CRC*/
-
-		u32SampleData += 5;/*Change the simulated value*/
-		
 		u8SampleIndex++;		/*Point to next sample buffer*/
-		u8SampleIndex &= 0x7;	/*Mask index (in oder to select from 0 to 7)*/
+		u8SampleIndex &= 0x7;	/*Mask index (in oder to select just from 0 to 7)*/
 	}
 
 	*simulation_channel = &mSerialSimulationData;
 	return 1;
 }
 
-void J2716SimulationDataGenerator::CreateSerialNibbles( U32 u32SampleData )
+void J2716SimulationDataGenerator::CreateSerialNibbles( U8* pu8Data , U8 u8Len )
 {
-	U8 u8TempNibbleVal=0;
-	U32 u32Temp = u32SampleData;
-	//const U8 kau8CrcLookupTbl[ ] = { 0 , 13 , 7 , 10 , 14 , 3 , 9 , 4 , 1 , 12 , 6 , 11 , 15 , 2 , 8 , 5 };
-	//u8CrcVal = ku8CrcSeed;
-	for( U16 i = 0; i < mSettings->u32Nibbles; i++ )
+	for( U16 i = 0; i < u8Len; i++ )
 	{
-		//u8TempNibbleVal = (U8)(u32SampleData & 0x0F);/* Mask nibble */
 		StartOfData();
-		AdvanceTicks(u8TempNibbleVal);
-		//u8CrcVal ^= kau8CrcLookupTbl[ u8CrcVal ];
-		u32SampleData>>=4;/*Shift one nibble*/
+		AdvanceTicks( *pu8Data );
 	}
 }
 
@@ -122,9 +116,7 @@ U8 J2716SimulationDataGenerator::ComputeCrc( U8* pu8Data , U8 u8Len )
 	{
 		u8Temp = kau8CrcLookupTbl[u8Crc];
 		u8Crc = u8Temp ^  *pu8Data;
-		//u8Crc = kau8CrcLookupTbl[ ( u8Crc ^ ( *pu8Data ) ) & 0x0FU ];
 		pu8Data++;
-		printf( "%d" , u8Crc );
 	}
 	u8Crc = kau8CrcLookupTbl[ u8Crc ];
 	return u8Crc;
