@@ -25,6 +25,7 @@ protected:
 	void CreatePausePulse();
 	void AdvanceTicks(U8 u8Ticks );
 	void StartOfData();
+	U8 ComputeCrc( U8* pu8Data , U8 u8Len );
 	std::string mSerialText;
 	U32 u32MicroSecondVal;
 	U8 u8CrcVal;
