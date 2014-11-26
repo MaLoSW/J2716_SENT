@@ -44,7 +44,8 @@ U32 J2716SimulationDataGenerator::GenerateSimulationData( U64 largest_sample_req
 		else
 		{
 		}
-		/*ToDo:Compute CRC*/
+		StartOfData();
+		AdvanceTicks( u8CrcVal );
 		u32SampleData += 5;/*Change the simulated value*/
 	}
 
@@ -57,39 +58,15 @@ void J2716SimulationDataGenerator::CreateSerialNibbles( U32 u32SampleData )
 	U8 u8TempNibbleVal;
 	U32 u32Temp = u32SampleData;
 	
+	u8CrcVal = ku8CrcSeed;
 	for( U16 i = 0; i < mSettings->u32Nibbles; i++ )
 	{
 		u8TempNibbleVal = (U8)(u32SampleData & 0x0F);/* Mask nibble */
 		StartOfData();
 		AdvanceTicks(u8TempNibbleVal);
+		u8CrcVal ^= kau8CrcLookupTbl[ u8CrcVal ];
 		u32SampleData>>=4;/*Shift one nibble*/
 	}
-
-#if 0
-	//we're currenty high
-	//let's move forward a little
-	mSerialSimulationData.Advance( samples_per_bit * 10 );
-
-	mSerialSimulationData.Transition();  //low-going edge for start bit
-	mSerialSimulationData.Advance( samples_per_bit );  //add start bit time
-
-	U8 mask = 0x1 << 7;
-	for( U32 i=0; i<8; i++ )
-	{
-		if( ( byte & mask ) != 0 )
-			mSerialSimulationData.TransitionIfNeeded( BIT_HIGH );
-		else
-			mSerialSimulationData.TransitionIfNeeded( BIT_LOW );
-
-		mSerialSimulationData.Advance( samples_per_bit );
-		mask = mask >> 1;
-	}
-
-	mSerialSimulationData.TransitionIfNeeded( BIT_HIGH ); //we need to end high
-
-	//lets pad the end a bit for the stop bit:
-	mSerialSimulationData.Advance( samples_per_bit );
-#endif
 }
 
 void J2716SimulationDataGenerator::CreateSyncField( )
