@@ -57,7 +57,7 @@ void J2716SimulationDataGenerator::CreateSerialNibbles( U32 u32SampleData )
 {
 	U8 u8TempNibbleVal;
 	U32 u32Temp = u32SampleData;
-	
+	const U8 kau8CrcLookupTbl[ ] = { 0 , 13 , 7 , 10 , 14 , 3 , 9 , 4 , 1 , 12 , 6 , 11 , 15 , 2 , 8 , 5 };
 	u8CrcVal = ku8CrcSeed;
 	for( U16 i = 0; i < mSettings->u32Nibbles; i++ )
 	{

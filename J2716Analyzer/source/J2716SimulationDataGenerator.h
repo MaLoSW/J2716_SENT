@@ -32,6 +32,5 @@ protected:
 private:
 	const U8 ku8LowPulseTicks = 5;
 	const U8 ku8CrcSeed = 5;
-	const U8 kau8CrcLookupTbl[ ] = { 0 , 13 , 7 , 10 , 14 , 3 , 9 , 4 , 1 , 12 , 6 , 11 , 15 , 2 , 8 , 5 };
 };
 #endif //J2716_SIMULATION_DATA_GENERATOR
