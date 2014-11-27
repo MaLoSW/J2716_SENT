@@ -23,6 +23,8 @@ void J2716Analyzer::WorkerThread()
 	U8 u8HighTicksCtr = 0;
 	bool boJ2716SyncFlag = false;
 	bool boJ2716StatusFlag = false;
+	bool boJ2716DataFlag = false;
+	bool boJ2716CrcFlag = false;
 	bool boJ2716PauseFlag = false;
 	const U32 ku32MegaHert = 1000000U;
 	U32 ku32MicroSecond;
@@ -32,9 +34,9 @@ void J2716Analyzer::WorkerThread()
 	const double kdSyncPeriod = ku8SyncTicks * kdTick;
 	const double kdPausePeriod = ku8PauseTicks * kdTick;
 	const double kdMinPeriod = ku8MinTicks * kdTick;
-	double dTime = double( 0 );
-	double dTempMin = double( 0 );
-	double dTempMax = double( 0 );
+	double dPeriod = double( 0 );
+	double dPeriodMin = double( 0 );
+	double dPeriodMax = double( 0 );
 
 	mResults.reset( new J2716AnalyzerResults( this, mSettings.get() ) );
 	SetAnalyzerResults( mResults.get() );
@@ -77,7 +79,11 @@ void J2716Analyzer::WorkerThread()
 		}
 		/*Start of data*/
 		frmSync.mStartingSampleInclusive = u64StartingSample;
-		if( false == boJ2716SyncFlag && true == boJ2716PauseFlag )
+		if( false == boJ2716SyncFlag && 
+			false == boJ2716StatusFlag &&
+			true == boJ2716DataFlag &&
+			true == boJ2716CrcFlag &&
+			true == boJ2716PauseFlag )
 		{
 			boJ2716SyncFlag = true;
 			mResults->AddMarker( mJ2716Data->GetSampleNumber() , mResults->Start , mSettings->mInputChannel );
@@ -110,22 +116,22 @@ void J2716Analyzer::WorkerThread()
 		frmSync.mData2 = u64RisingEdgeSample;
 		u64EndOfData = mJ2716Data->GetSampleNumber( );
 		frmSync.mEndingSampleInclusive = u64EndOfData;
-		dTime = ( double( frmSync.mEndingSampleInclusive ) - double( frmSync.mStartingSampleInclusive ) ) / double( mSampleRateHz );
+		dPeriod = ( double( frmSync.mEndingSampleInclusive ) - double( frmSync.mStartingSampleInclusive ) ) / double( mSampleRateHz );
 
 		/*Identify SENT packet here*/
-		if( dTime >= kdMinPeriod )
+		if( dPeriod >= kdMinPeriod )
 		{
-			dTempMax = kdSyncPeriod*1.2;/*+20%*/
-			dTempMin = kdSyncPeriod*0.8;/*-20%*/
-			if( ( dTime > dTempMin ) && ( dTime < dTempMax ) )
+			dPeriodMax = kdSyncPeriod*1.2;/*+20%*/
+			dPeriodMin = kdSyncPeriod*0.8;/*-20%*/
+			if( ( dPeriod > dPeriodMin ) && ( dPeriod < dPeriodMax ) )
 			{
 				frmSync.mType = SENTSync;
 			}
 			else
 			{
-				dTempMax = kdPausePeriod*1.2;/*+20%*/
-				dTempMin = kdPausePeriod*0.8;/*-20%*/
-				if( ( dTime > dTempMin ) && ( dTime < dTempMax ) )
+				dPeriodMax = kdPausePeriod*1.2;/*+20%*/
+				dPeriodMin = kdPausePeriod*0.8;/*-20%*/
+				if( ( dPeriod > dPeriodMin ) && ( dPeriod < dPeriodMax ) )
 				{
 					frmSync.mType = SENTPause;
 					boJ2716PauseFlag = true;
@@ -140,26 +146,32 @@ void J2716Analyzer::WorkerThread()
 						u8HighTicksCtr++;
 					}
 					u8J2716Val = ( u8LowTickCtr + u8HighTicksCtr ) - ku8MinTicks;
+					/*Passes the value decoded*/
 					frmSync.mData1 = u8J2716Val;
 
+					/*Indentify the type of data */
 					if( false == boJ2716StatusFlag )
 					{
 						boJ2716StatusFlag = true;
 						frmSync.mType = SENTStatus;
 					}
 					else
-					{
+					{	/* Receivind data  */
 						if( u8Data < mSettings->u32Nibbles )
 						{
+							boJ2716DataFlag = true;
 							frmSync.mType = SENTData;
 							frmSync.mData2 = u8Data;
+							au8InternalBuffer[ u8Data ] = frmSync.mData1;
 							u8Data++;
 						}
 						else
 						{
+							boJ2716CrcFlag = true;
 							frmSync.mType = SENTCrc;
+							frmSync.mData2 = u8CalcCrc( au8InternalBuffer , mSettings->u32Nibbles );
 							/*J2716 Frame ends here*/
-							mResults->AddMarker( mJ2716Data->GetSampleNumber() , mResults->Start , mSettings->mInputChannel );
+							//mResults->AddMarker( mJ2716Data->GetSampleNumber() , mResults->Stop , mSettings->mInputChannel );
 							u8Data = 0;
 							boJ2716PauseFlag = false;
 							boJ2716StatusFlag = false;
@@ -220,4 +232,19 @@ Analyzer* CreateAnalyzer()
 void DestroyAnalyzer( Analyzer* analyzer )
 {
 	delete analyzer;
+}
+
+U8 J2716Analyzer::u8CalcCrc( U8* pu8Data , U8 u8Len )
+{
+	const U8 kau8CrcLookupTbl[ 16 ] = { 0 , 13 , 7 , 10 , 14 , 3 , 9 , 4 , 1 , 12 , 6 , 11 , 15 , 2 , 8 , 5 };
+	U8 u8Crc = ku8CrcSeed;/*Seed*/
+	U8 u8Temp;
+	for( U8 i = 0; i < u8Len; i++ )
+	{
+		u8Temp = kau8CrcLookupTbl[ u8Crc ];
+		u8Crc = u8Temp ^  *pu8Data;
+		pu8Data++;
+	}
+	u8Crc = kau8CrcLookupTbl[ u8Crc ];
+	return u8Crc;
 }

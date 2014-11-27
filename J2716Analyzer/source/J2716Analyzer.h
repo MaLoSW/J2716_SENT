@@ -54,9 +54,13 @@ protected: //vars
 	U32 mStartOfStopBitOffset;
 	U32 mEndOfStopBitOffset;
 private:
+	const U8 ku8CrcSeed = 5;
 	const U8 ku8SyncTicks = 56;
 	const U8 ku8PauseTicks = 77;
 	const U8 ku8MinTicks = 12;
+	U8 au8InternalBuffer[ 6 ];
+	U8 u8InternalCrc;
+	U8 u8CalcCrc( U8* pu8Data , U8 u8Len );
 };
 
 extern "C" ANALYZER_EXPORT const char* __cdecl GetAnalyzerName();

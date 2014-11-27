@@ -20,48 +20,70 @@ void J2716AnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel
 {
 	ClearResultStrings();
 	Frame frame = GetFrame( frame_index );
-	char i8StringData1[ 64 ];
-	char i8StringData2[ 64 ];
-	char i8StringTime[ 16 ];
+	U8 u8TempCrc = 0;
+	char ai8Data1Str[ 64 ];
+	char ai8Data2Str[ 64 ];
+	char ai8TicksStr[ 16 ];
+	char ai8TimeStr[ 16 ];
+	U8 u8Ticks = 0;
+	const double kdMicro = 1E-6;
+	const double kdRoundError = 1E-19;
+	double dFramePeriod = double( 0 );
 
-	AnalyzerHelpers::GetNumberString( frame.mData1 , display_base , 2 , &i8StringData1[ 0 ] , sizeof( i8StringData1 ) );
+	dFramePeriod = ( double( frame.mEndingSampleInclusive ) - double( frame.mStartingSampleInclusive ) ) / double( mAnalyzer->GetSampleRate( ) ) + kdRoundError;
+	u8Ticks = U8( dFramePeriod / double( mSettings->mBitRate*kdMicro ) );
+
+	AnalyzerHelpers::GetNumberString( frame.mData1 , display_base , 2 , &ai8Data1Str[ 0 ] , sizeof( ai8Data1Str ) );
+	AnalyzerHelpers::GetNumberString( u8Ticks , Decimal , 2 , &ai8TicksStr[ 0 ] , sizeof( ai8TicksStr ) );
+
 	switch( frame.mType )
 	{
 		case SENTSync:
-		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate( ) , &i8StringTime[ 0 ] , 9/* x.xxxxxx */ );
+		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate() , &ai8TimeStr[ 0 ] , 9/* x.xxxxxx + '\0'  */ );
 		AddResultString( "SYNC " );
-		AddResultString( "SYNC Field " );
-		AddResultString( "SYNC Field [" , i8StringTime , " s]" );
+		AddResultString( "SYNC Field ~" , ai8TicksStr , " ticks" );
+		AddResultString( "SYNC Field ~" , ai8TicksStr , " ticks [" , ai8TimeStr , " s]" );
 		break;
 		case SENTStatus:
 		AddResultString( "STAT " );
 		AddResultString( "STATUS " );
-		AddResultString( "STATUS " , i8StringData1 );
-		/*ToDo: Process SENT Status*/
+		AddResultString( "STATUS " , ai8Data1Str );
+		AddResultString( "STATUS " , ai8Data1Str ," ~" , ai8TicksStr , " ticks" );
 		break;
 		case SENTData:
-		AnalyzerHelpers::GetNumberString( frame.mData2 , Decimal , 8 , &i8StringData2[ 0 ] , sizeof( i8StringData2 ) );
+		AnalyzerHelpers::GetNumberString( frame.mData2 , Decimal , 8 , &ai8Data2Str[ 0 ] , sizeof( ai8Data2Str ) );
 		AddResultString( "DATA " );
-		AddResultString( "DATA " , i8StringData2 );
-		AddResultString( "DATA " , i8StringData2 , " [" , i8StringData1 , "]" );
-		/*ToDo: Process SENT Data*/
+		AddResultString( "DATA " , ai8Data2Str );
+		AddResultString( "DATA " , ai8Data2Str , " [" , ai8Data1Str , "]" );
 		break;
 		case SENTCrc:
-		AddResultString( "CRC " );
-		AddResultString( "CRC " , " [" , i8StringData1 , "]" );
-		/*ToDo: Process SENT CRC*/
+		//u8TempCrc =mAnalyzer
+		if( frame.mData1 == frame.mData2 )
+		{
+			AddResultString( "CRC " );
+			AddResultString( "CRC OK" );
+			AddResultString( "CRC OK [" , ai8Data1Str , "]" );
+		}
+		else
+		{
+			AnalyzerHelpers::GetNumberString( frame.mData2 , display_base , 2 , &ai8Data2Str[ 0 ] , sizeof( ai8Data2Str ) );
+			AddResultString( "CRC! " );
+			AddResultString( "CRC! Rx[" , ai8Data1Str , "] Calc{" , ai8Data2Str , "}" );
+		}
 		break;
 		case SENTPause:
+		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate() , &ai8TimeStr[ 0 ] , 9/* x.xxxxxx */ );
 		AddResultString( "PAUSE " );
-		/*ToDo: Process SENT Pause*/
+		AddResultString( "PAUSE ~" , ai8TicksStr , " ticks" );
+		AddResultString( "PAUSE ~" , ai8TicksStr , " ticks [",ai8TimeStr , " s]" );
 		break;
 		default:
 		//frame.mFlags |= DISPLAY_AS_ERROR_FLAG;
-		AnalyzerHelpers::GetNumberString( frame.mData2 , Decimal , 8 , &i8StringData2[ 0 ] , sizeof( i8StringData2 ) );
-		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate( ) , &i8StringTime[ 0 ] , 9/* x.xxxxxx */ );
+		AnalyzerHelpers::GetNumberString( frame.mData2 , Decimal , 8 , &ai8Data2Str[ 0 ] , sizeof( ai8Data2Str ) );
+		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate() , &ai8TimeStr[ 0 ] , 9/* x.xxxxxx */ );
 		AddResultString( "?? " );
-		AddResultString( "?? " , i8StringData2 );
-		AddResultString( "?? " , i8StringData2 , " Ticks @ " , i8StringTime , " s" );
+		AddResultString( "?? " , ai8TicksStr );
+		AddResultString( "?? " , ai8TicksStr , " Ticks @ " , ai8TimeStr , " s" );
 		break;
 	}
 }
