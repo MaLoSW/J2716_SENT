@@ -74,6 +74,7 @@ void J2716SimulationDataGenerator::CreateSerialNibbles( U8* pu8Data , U8 u8Len )
 	{
 		StartOfData();
 		AdvanceTicks( *pu8Data );
+		pu8Data++;
 	}
 }
 

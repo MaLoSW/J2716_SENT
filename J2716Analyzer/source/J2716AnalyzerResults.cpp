@@ -20,10 +20,50 @@ void J2716AnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel
 {
 	ClearResultStrings();
 	Frame frame = GetFrame( frame_index );
+	char i8StringData1[ 64 ];
+	char i8StringData2[ 64 ];
+	char i8StringTime[ 16 ];
 
-	char number_str[128];
-	AnalyzerHelpers::GetNumberString( frame.mData1, display_base, 8, number_str, 128 );
-	AddResultString( number_str );
+	AnalyzerHelpers::GetNumberString( frame.mData1 , display_base , 2 , &i8StringData1[ 0 ] , sizeof( i8StringData1 ) );
+	switch( frame.mType )
+	{
+		case SENTSync:
+		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate( ) , &i8StringTime[ 0 ] , 9/* x.xxxxxx */ );
+		AddResultString( "SYNC " );
+		AddResultString( "SYNC Field " );
+		AddResultString( "SYNC Field [" , i8StringTime , " s]" );
+		break;
+		case SENTStatus:
+		AddResultString( "STAT " );
+		AddResultString( "STATUS " );
+		AddResultString( "STATUS " , i8StringData1 );
+		/*ToDo: Process SENT Status*/
+		break;
+		case SENTData:
+		AnalyzerHelpers::GetNumberString( frame.mData2 , Decimal , 8 , &i8StringData2[ 0 ] , sizeof( i8StringData2 ) );
+		AddResultString( "DATA " );
+		AddResultString( "DATA " , i8StringData2 );
+		AddResultString( "DATA " , i8StringData2 , " [" , i8StringData1 , "]" );
+		/*ToDo: Process SENT Data*/
+		break;
+		case SENTCrc:
+		AddResultString( "CRC " );
+		AddResultString( "CRC " , " [" , i8StringData1 , "]" );
+		/*ToDo: Process SENT CRC*/
+		break;
+		case SENTPause:
+		AddResultString( "PAUSE " );
+		/*ToDo: Process SENT Pause*/
+		break;
+		default:
+		//frame.mFlags |= DISPLAY_AS_ERROR_FLAG;
+		AnalyzerHelpers::GetNumberString( frame.mData2 , Decimal , 8 , &i8StringData2[ 0 ] , sizeof( i8StringData2 ) );
+		AnalyzerHelpers::GetTimeString( frame.mEndingSampleInclusive , frame.mStartingSampleInclusive , mAnalyzer->GetSampleRate( ) , &i8StringTime[ 0 ] , 9/* x.xxxxxx */ );
+		AddResultString( "?? " );
+		AddResultString( "?? " , i8StringData2 );
+		AddResultString( "?? " , i8StringData2 , " Ticks @ " , i8StringTime , " s" );
+		break;
+	}
 }
 
 void J2716AnalyzerResults::GenerateExportFile( const char* file, DisplayBase display_base, U32 export_type_user_id )

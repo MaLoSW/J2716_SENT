@@ -5,6 +5,28 @@
 #include "J2716AnalyzerResults.h"
 #include "J2716SimulationDataGenerator.h"
 
+/* Possible valus for "SENT_DBG" */
+#define SENT_DBG_OFF	(0)
+#define SENT_DBG_ON		(1)
+
+/* Switch for debugging */
+#define	SENT_DBG	SENT_DBG_ON
+
+#define	SENT_FLAG1		((U8)0x01)
+#define	SENT_FLAG2		((U8)0x02)
+#define	SENT_FLAG3		((U8)0x04)
+#define	SENT_FLAG4		((U8)0x08)
+#define	SENT_FLAG5		((U8)0x01)
+#define	SENT_FLAG6		((U8)0x02)
+/*							 0x40	RESERVED by "DISPLAY_AS_WARNING_FLAG" in <AnalyzerResults.h> */
+/*							 0x80	RESERVED by "DISPLAY_AS_ERROR_FLAG" in <AnalyzerResults.h> */
+
+/* Types of SENT packets */
+enum J2716Packet
+{
+	SENTSync , SENTStatus , SENTData , SENTCrc , SENTPause , SENTError
+};
+
 class J2716AnalyzerSettings;
 class ANALYZER_EXPORT J2716Analyzer : public Analyzer
 {
@@ -22,7 +44,7 @@ public:
 protected: //vars
 	std::auto_ptr< J2716AnalyzerSettings > mSettings;
 	std::auto_ptr< J2716AnalyzerResults > mResults;
-	AnalyzerChannelData* mSerial;
+	AnalyzerChannelData* mJ2716Data;
 
 	J2716SimulationDataGenerator mSimulationDataGenerator;
 	bool mSimulationInitilized;
@@ -31,6 +53,10 @@ protected: //vars
 	U32 mSampleRateHz;
 	U32 mStartOfStopBitOffset;
 	U32 mEndOfStopBitOffset;
+private:
+	const U8 ku8SyncTicks = 56;
+	const U8 ku8PauseTicks = 77;
+	const U8 ku8MinTicks = 12;
 };
 
 extern "C" ANALYZER_EXPORT const char* __cdecl GetAnalyzerName();
